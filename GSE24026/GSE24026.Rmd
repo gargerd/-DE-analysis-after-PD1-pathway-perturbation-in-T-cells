@@ -98,7 +98,6 @@ hist_res <- hist(tt$P.Value, 100, col = "cornsilk1", freq = TRUE,
              main = "Histogram of the p values",
              border = "antiquewhite4",
              xlab = "p-values")
-tt
 ```
 
 ```{r}
@@ -106,10 +105,8 @@ tt
 hu_names<-gene_names[match(rownames(tt),gene_names$affy_hg_u133_plus_2),]
 tt$hu_gene_name<-hu_names$external_gene_name
 
-#write significant genes to txt
-tt_sign<-subset(tt,tt$adj.P.Val<0.1)
-tt_sign
-write.csv(tt_sign,"Sign_DE.csv")
+#write toptable to csv
+write.csv(tt,"DE_analysis.csv")
 ```
 
 
