@@ -59,7 +59,6 @@ gen_exp_2<-data.frame(t(gen_exp))
 
 pca_res <- prcomp((gen_exp_2), scale. = TRUE)
 gen_exp_2$pd1_stim<-metad$PD1_STIMULATION
-summary(pca_res)
 autoplot(pca_res,data=gen_exp_2,colour="pd1_stim")
 
 ```
@@ -73,19 +72,19 @@ hist_res <- hist(gen_med, 200, col = "cornsilk1", freq = TRUE,
              main = "Histogram of the median intensities",
              border = "antiquewhite4",
              xlab = "Median intensities")
-abline(v = hist_res$breaks[which.max(hist_res$counts)], col = "coral4", lwd = 2)
+#abline(v = hist_res$breaks[which.max(hist_res$counts)], col = "coral4", lwd = 2)
 ```
 ```{r}
-#set threshold of low count numbers according to histogram->data left to the first peak is dropped
-man_threshold<-hist_res$breaks[which.max(hist_res$counts)]
-#number of minimum samples, in that the expressions have to reach the threshold to be kept
-samples_cutoff<-4
-
-#actual filtering
-idx_man_threshold <- apply(gen_exp, 1,function(x){
-                             sum(x > man_threshold) >= samples_cutoff})
-                             table(idx_man_threshold)
-gen_exp<-subset(gen_exp,idx_man_threshold)
+# #set threshold of low count numbers according to histogram->data left to the first peak is dropped
+# man_threshold<-hist_res$breaks[which.max(hist_res$counts)]
+# #number of minimum samples, in that the expressions have to reach the threshold to be kept
+# samples_cutoff<-4
+# 
+# #actual filtering
+# idx_man_threshold <- apply(gen_exp, 1,function(x){
+#                              sum(x > man_threshold) >= samples_cutoff})
+#                              table(idx_man_threshold)
+# gen_exp<-subset(gen_exp,idx_man_threshold)
 ```
 
 ```{r}
@@ -106,7 +105,6 @@ hist_res <- hist(tt$P.Value, 100, col = "cornsilk1", freq = TRUE,
              main = "Histogram of the p values",
              border = "antiquewhite4",
              xlab = "p-values")
-tt
 ```
 
 ```{r}
@@ -115,8 +113,7 @@ gene_symbols<-gene_names[match(rownames(tt),gene_names$affy_mouse430a_2),]
 tt$gene_name<-gene_symbols$mgi_symbol
 
 #write significant genes to txt
-tt_sign<-subset(tt,tt$adj.P.Val<0.1)
-write.csv(tt_sign,"Sign_DE.csv")
+write.csv(tt,"DE_analysis.csv")
 ```
 
 
