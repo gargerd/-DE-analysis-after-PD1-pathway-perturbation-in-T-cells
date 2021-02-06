@@ -1,0 +1,122 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r eval=FALSE, include=FALSE}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+library(affy)   
+library(limma)
+library("biomaRt")
+library("dplyr")
+library("plyr")
+library("writexl")
+library("ggfortify")
+project<-"GSE24026"
+```
+
+```{r}
+gen_exp<-read.csv("GSE24026_exp_data.txt",header = TRUE,sep='\t')
+rownames(gen_exp)<-gen_exp[,"ID_REF"]
+gen_exp<-gen_exp[-1]
+```
+
+```{r}
+#get affymetrix id-human gene symbol dataset,->saved it as gene_names.csv
+gene_names<-read.csv("gene_names.csv",header=TRUE, row.names = 1)
+
+#filter out affy ids that map to multiple gene symbols
+summarized <-gene_names%>%
+            group_by(affy_hg_u133_plus_2) %>%
+            dplyr::summarize(no=n_distinct(external_gene_name))
+filtered<-filter(summarized,no>1)
+ids_to_exclude<-(rownames(gen_exp)%in% filtered$affy_hg_u133_plus_2)
+gen_exp<-subset(gen_exp,!ids_to_exclude)
+
+#plotting PC1-PC2 plot
+metad<-read.csv(paste0(project,"_metadata.csv"),header = TRUE,row.names = 1)
+gen_exp_2<-as.data.frame(t(gen_exp))
+
+pca_res <- prcomp((gen_exp_2), scale. = TRUE)
+#gen_exp_2$apd1_treatment<-metad$aPD1_TREATMENT
+(pca_res)
+#autoplot(pca_res,data=gen_exp_2,colour="apd1_treatment")
+```
+
+```{r}
+#log2 transformation of data for limma
+gen_exp<-log(gen_exp[,],2)
+#calculate medians of rows to filter out genes with low median(=low count) numbers, plotting them as histogram
+gen_med<-rowMedians(data.matrix(gen_exp))
+hist_res <- hist(gen_med, 200, col = "cornsilk1", freq = TRUE,
+             main = "Histogram of the median intensities",
+             border = "antiquewhite4",
+             xlab = "Median intensities",
+             xlim=c(2,15))
+abline(v = hist_res$breaks[which.max(hist_res$counts)], col = "coral4", lwd = 2)
+```
+```{r}
+#set threshold of low count numbers according to histogram->data left to the first peak is dropped
+man_threshold<-hist_res$breaks[which.max(hist_res$counts)]
+#number of minimum samples, in that the expressions have to reach the threshold to be kept
+samples_cutoff<-5
+
+#actual filtering
+idx_man_threshold <- apply(gen_exp, 1,function(x){
+                             sum(x > man_threshold) >= samples_cutoff})
+                             table(idx_man_threshold)
+gen_exp<-subset(gen_exp,idx_man_threshold)
+```
+
+```{r}
+#transform data to expressionset object for limma 
+eset<-ExpressionSet(data.matrix(gen_exp))
+metad<-read.csv("GSE24026_metadata.csv",header = TRUE,row.names = 1)
+
+#create design matrix with factors
+group <- factor(metad$aPD1_TREATMENT, levels=c("n","y"))
+design<-model.matrix(~group)
+colnames(design) <- c("intercept","aPD1")
+
+#fit model
+fit <- lmFit(eset, design)
+fit <-eBayes(fit)
+tt<-topTable(fit, coef="aPD1", adjust="BH",number=100000)
+hist_res <- hist(tt$P.Value, 100, col = "cornsilk1", freq = TRUE,
+             main = "Histogram of the p values",
+             border = "antiquewhite4",
+             xlab = "p-values")
+tt
+```
+
+```{r}
+#add human gene symbols to toptable
+hu_names<-gene_names[match(rownames(tt),gene_names$affy_hg_u133_plus_2),]
+tt$hu_gene_name<-hu_names$external_gene_name
+
+#write significant genes to txt
+tt_sign<-subset(tt,tt$adj.P.Val<0.1)
+write.csv(tt_sign,"Sign_DE.csv")
+```
+
+
+
+  
+
+
+
+
+
