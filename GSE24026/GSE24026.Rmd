@@ -51,9 +51,8 @@ metad<-read.csv(paste0(project,"_metadata.csv"),header = TRUE,row.names = 1)
 gen_exp_2<-as.data.frame(t(gen_exp))
 
 pca_res <- prcomp((gen_exp_2), scale. = TRUE)
-#gen_exp_2$apd1_treatment<-metad$aPD1_TREATMENT
-(pca_res)
-#autoplot(pca_res,data=gen_exp_2,colour="apd1_treatment")
+gen_exp_2$apd1_treatment<-metad$aPD1_TREATMENT
+autoplot(pca_res,data=gen_exp_2,colour="apd1_treatment")
 ```
 
 ```{r}
@@ -109,6 +108,7 @@ tt$hu_gene_name<-hu_names$external_gene_name
 
 #write significant genes to txt
 tt_sign<-subset(tt,tt$adj.P.Val<0.1)
+tt_sign
 write.csv(tt_sign,"Sign_DE.csv")
 ```
 
